@@ -4,7 +4,7 @@ module.exports = {
   entry: './src/index.js',
   output: {
     filename: 'main.js',
-    webassemblyModuleFilename: "[hash].wasm",
+    webassemblyModuleFilename: "sdf_designer.wasm",
     path: path.resolve(__dirname, 'dist'),
   },
   module: {
@@ -15,4 +15,5 @@ module.exports = {
 			}
 		]
 	},
+	mode: "production"
 };
