@@ -1,5 +1,11 @@
 use web_sys::{WebGlProgram, WebGlRenderingContext, WebGlShader};
 
+
+
+pub trait Shader {
+	fn get_attrib_position(&self) -> u32;
+}
+
 pub struct SdfShader {
     pub program: WebGlProgram,
     pub attrib_vertex_positions: u32,
@@ -19,6 +25,13 @@ impl SdfShader {
             attrib_vertex_positions: attrib_vertex_positions as u32,
         })
     }
+}
+
+
+impl Shader for SdfShader {
+	fn get_attrib_position(&self) -> u32 {
+		return self.attrib_vertex_positions
+	}
 }
 
 #[derive(Debug)]
