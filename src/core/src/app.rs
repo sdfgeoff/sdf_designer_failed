@@ -3,9 +3,18 @@ use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{
     HtmlCanvasElement, WebGlRenderingContext,
 };
+use wasm_bindgen::prelude::{wasm_bindgen};
 
 use crate::full_screen_quad;
 use crate::shader;
+
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+    fn alert(s: &str);
+}
 
 
 pub struct App {
@@ -13,6 +22,9 @@ pub struct App {
     gl_context: WebGlRenderingContext,
     shader_info: shader::SdfShader,
     buffers: full_screen_quad::FullScreenQuad,
+    
+    width: u32,
+    height: u32,
 }
 
 
@@ -43,6 +55,8 @@ fn get_gl_context(canvas: &HtmlCanvasElement) -> Result<WebGlRenderingContext, J
 
 impl App {
     pub fn new(canvas: HtmlCanvasElement) -> Result<Self, AppError> {
+
+		
         let gl: WebGlRenderingContext = get_gl_context(&canvas)?;
         gl.clear_color(0.0, 0.0, 0.0, 1.0);
         gl.enable(WebGlRenderingContext::DEPTH_TEST);
@@ -55,16 +69,38 @@ impl App {
 
 		let shader_info = shader::SdfShader::new(&gl)?;
 		let buffers = full_screen_quad::FullScreenQuad::new(&gl)?;
-
+		
+		
         Ok(Self {
             gl_context: gl,
             shader_info: shader_info,
             buffers,
-            canvas
+            canvas,
+            width: 0,
+            height: 0
         })
     }
+    
+    fn check_resize(&mut self) {
+		let width = self.canvas.client_width() as u32;
+		let height = self.canvas.client_height() as u32;
+		if width != self.width || self.height != self.height {
+			self.width = width;
+			self.height = height;
+			self.canvas.set_width(self.width);
+			self.canvas.set_height(self.height);
+			self.gl_context.viewport(0, 0, self.width as i32, self.height as i32);
+			log(&format!("Resized to {}:{}", self.width, self.height));
+		}
+		
+	}
 
     pub fn update(&mut self) {
+		self.check_resize();
+		
+		
+		
+		
         self.gl_context.clear(
             WebGlRenderingContext::COLOR_BUFFER_BIT | WebGlRenderingContext::DEPTH_BUFFER_BIT,
         );

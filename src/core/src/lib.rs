@@ -25,7 +25,6 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 extern "C" {
     #[wasm_bindgen(js_namespace = console)]
     fn log(s: &str);
-
     fn alert(s: &str);
 }
 
