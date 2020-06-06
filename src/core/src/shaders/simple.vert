@@ -1,6 +1,7 @@
 precision mediump float;
 attribute vec4 aVertexPosition;
 
+
 varying vec4 screen_pos;
 
 void main() {

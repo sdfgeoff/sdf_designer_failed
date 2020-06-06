@@ -10,7 +10,7 @@
 precision mediump float;
 varying vec4 screen_pos;
 
-vec2 iResolution = vec2(512.0, 512.0);
+uniform vec2 resolution;
 
 struct surface_t {
     int surface_id;
@@ -103,15 +103,14 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     // camera coords (from -1 to 1)
     vec2 cam_coords = fragCoord; //(fragCoord/iResolution.xy - vec2(0.5)) * 2.0;
-    //cam_coords.x *= iResolution.x / iResolution.y;
+    cam_coords.x *= resolution.x / resolution.y;
     
     vec3 ray_start_position = (projection_matrix * vec4(cam_coords.x, cam_coords.y, 0.0, 0.0)).xyz;
     vec3 ray_end_position = (projection_matrix * vec4(cam_coords.x, cam_coords.y, 1.0, 0.0)).xyz;
     vec3 ray_direction = ray_end_position - ray_start_position;
     
     vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
-    
-    
+        
     vec3 sample_point = ray_start_position;
     surface_t results = world(sample_point);
     float dist = 0.0;
@@ -127,7 +126,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         color = vec4(
             results.normal.x,
             results.normal.y,
-            results.surface_id,
+            float(results.surface_id) / 3.0,
             dist
         );
     }

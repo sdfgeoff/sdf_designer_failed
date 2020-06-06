@@ -20,8 +20,8 @@ extern "C" {
 pub struct App {
 	canvas: HtmlCanvasElement,
     gl_context: WebGlRenderingContext,
-    shader_info: shader::SdfShader,
-    buffers: full_screen_quad::FullScreenQuad,
+    sdf_shader: shader::SdfShader,
+    quad: full_screen_quad::FullScreenQuad,
     
     width: u32,
     height: u32,
@@ -56,7 +56,6 @@ fn get_gl_context(canvas: &HtmlCanvasElement) -> Result<WebGlRenderingContext, J
 impl App {
     pub fn new(canvas: HtmlCanvasElement) -> Result<Self, AppError> {
 
-		
         let gl: WebGlRenderingContext = get_gl_context(&canvas)?;
         gl.clear_color(0.0, 0.0, 0.0, 1.0);
         gl.enable(WebGlRenderingContext::DEPTH_TEST);
@@ -73,8 +72,8 @@ impl App {
 		
         Ok(Self {
             gl_context: gl,
-            shader_info: shader_info,
-            buffers,
+            sdf_shader: shader_info,
+            quad: buffers,
             canvas,
             width: 0,
             height: 0
@@ -92,22 +91,19 @@ impl App {
 			self.gl_context.viewport(0, 0, self.width as i32, self.height as i32);
 			log(&format!("Resized to {}:{}", self.width, self.height));
 		}
-		
 	}
 
     pub fn update(&mut self) {
 		self.check_resize();
-		
-		
-		
 		
         self.gl_context.clear(
             WebGlRenderingContext::COLOR_BUFFER_BIT | WebGlRenderingContext::DEPTH_BUFFER_BIT,
         );
 
         // Tell WebGL to use our program when drawing
-        self.gl_context.use_program(Some(&self.shader_info.program));
+        self.gl_context.use_program(Some(&self.sdf_shader.program));
+        self.sdf_shader.set_resolution(&self.gl_context, self.width, self.height);
 
-        self.buffers.render(&self.gl_context, &self.shader_info)
+        self.quad.render(&self.gl_context, &self.sdf_shader)
     }
 }

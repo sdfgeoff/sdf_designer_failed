@@ -1,13 +1,12 @@
 /// This file handles bindings from the DOM to the application
-
 use std::cell::RefCell;
 use std::rc::Rc;
 use wasm_bindgen::prelude::{wasm_bindgen, Closure};
 use wasm_bindgen::{JsCast};
 
-mod shader;
-mod full_screen_quad;
-mod app;
+pub mod shader;
+pub mod full_screen_quad;
+pub mod app;
 
 use web_sys::{
     window, HtmlElement, HtmlCanvasElement,
@@ -71,7 +70,8 @@ impl Core {
 			}
 		};
 		overlay.set_inner_text(""); // Clear loading spinner
-
+		
+		log("Starting App");
         match app::App::new(canvas) {
             Ok(ap) => {
                 log("App Created");
