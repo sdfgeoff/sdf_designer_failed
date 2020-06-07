@@ -1,3 +1,4 @@
+#version 300 es
 // This is a test of signed distance fields where instead of each SDF function
 // only returning the distance, it returns a struct containing
 // the surface normals and a surface ID as well
@@ -8,9 +9,43 @@
 // and the surface ID.
 
 precision mediump float;
-varying vec4 screen_pos;
+in vec4 screen_pos;
+out vec4 FragColor;
 
 uniform vec2 resolution;
+
+
+float[] scene_description = float[] (
+	1.0, // New Entity
+	2.0, // translate
+	0.0, // x
+	0.0, // y
+	-5.0, // z
+	3.0, // sphere object
+	1.0, // radius
+	5.0, // union
+    
+    1.0, // New Entity
+	2.0, // translate
+	-1.0, // x
+	0.0, // y
+	-5.0, // z
+	3.0, // sphere object
+	1.0, // radius
+	5.0, // union
+
+    1.0, // New Entity
+    2.0, // translate
+	0.0, // x
+	-1.0, // y
+	-4.0, // z
+	3.0, // sphere object
+	1.0, // radius
+	6.0, // difference
+    
+	-1.0 // End
+);
+
 
 struct surface_t {
     int surface_id;
@@ -71,20 +106,64 @@ mat4 translation(vec3 trans) {
 
 
 surface_t world(vec3 world_position) {
-    surface_t sphere1 = sphere_sdf(transform(world_position, translation(-vec3(0.0, 0.0, 5.0))), 1, 1.0);
-    surface_t sphere2 = sphere_sdf(transform(world_position, translation(-vec3(0.0, 1.0, 4.0))), 2, 1.0);
-    surface_t sphere3 = sphere_sdf(transform(world_position, translation(-vec3(1.0, 0.0, 5.0))), 3, 1.0);
+	
+	
+	int pointer = 0;
+	int entity_id = 0;
+	surface_t scene_sdf = surface_t(0, 9999.9, vec3(0.0));
+	surface_t obj_sdf = surface_t(0, 9999.9, vec3(0.0));
+	vec3 view_point = world_position;
+	
+	
+	for(int i = 0; i < 9999; i++) {
+		float data = scene_description[pointer];
+		if (data == -1.0) {
+			// Scene ends
+			break;
+		} else if (data == 1.0) {
+			// New entity to work with
+			view_point = world_position;
+			entity_id += 1;
+			pointer += 1;
+		} else if (data == 2.0) {
+			// Perform translation
+			vec3 offset = vec3(
+				scene_description[pointer+1],
+				scene_description[pointer+2],
+				scene_description[pointer+3]
+			);
+			view_point = transform(view_point, translation(offset));
+			
+			pointer += 4;
+		} else if (data == 3.0) {
+			float radius = scene_description[pointer+1];
+			obj_sdf = sphere_sdf(view_point, entity_id, radius);
+			pointer += 2;
+		} else if (data == 5.0) {
+			scene_sdf = surface_union(scene_sdf, obj_sdf);
+			pointer += 1;
+		} else if (data == 6.0) {
+			scene_sdf = surface_difference(scene_sdf, obj_sdf);
+			pointer += 1;
+		}
+	}
+	
+	
+	
+    //surface_t sphere1 = sphere_sdf(transform(world_position, translation(-vec3(0.0, 0.0, 5.0))), 1, 1.0);
+    //surface_t sphere2 = sphere_sdf(transform(world_position, translation(-vec3(0.0, 1.0, 4.0))), 2, 1.0);
+    //surface_t sphere3 = sphere_sdf(transform(world_position, translation(-vec3(1.0, 0.0, 5.0))), 3, 1.0);
     
-    surface_t body = sphere1;
-    body = surface_union(body, sphere3);
-    body = surface_difference(body, sphere2);
+    //surface_t body = sphere1;
+    //body = surface_union(body, sphere3);
+    //body = surface_difference(body, sphere2);
     
     //for (int i; i<100; i++) {
     // 	surface_t new_sphere = sphere_sdf(transform(world_position, translation(-vec3(sin(float(i) + iTime), float(i) / 100.0, 5.0))), i+4, 1.0);
     //	body = surface_union(body, new_sphere);
     //}
     
-    return body;
+    return scene_sdf;
     
     
 }
@@ -102,7 +181,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     );
     
     // camera coords (from -1 to 1)
-    vec2 cam_coords = fragCoord; //(fragCoord/iResolution.xy - vec2(0.5)) * 2.0;
+    vec2 cam_coords = screen_pos.xy;//(fragCoord/iResolution.xy - vec2(0.5)) * 2.0;
     cam_coords.x *= resolution.x / resolution.y;
     
     vec3 ray_start_position = (projection_matrix * vec4(cam_coords.x, cam_coords.y, 0.0, 0.0)).xyz;
@@ -126,7 +205,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         color = vec4(
             results.normal.x,
             results.normal.y,
-            float(results.surface_id) / 3.0,
+            float(results.surface_id),
             dist
         );
     }
@@ -136,7 +215,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 }
 
 
-
 void main() {
-	mainImage(gl_FragColor, screen_pos.xy);
+       mainImage(FragColor, screen_pos.xy);
 }

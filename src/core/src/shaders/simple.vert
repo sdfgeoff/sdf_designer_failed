@@ -1,8 +1,10 @@
+#version 300 es
+
 precision mediump float;
-attribute vec4 aVertexPosition;
+in vec4 aVertexPosition;
 
 
-varying vec4 screen_pos;
+out vec4 screen_pos;
 
 void main() {
 	mat4 trans = mat4(

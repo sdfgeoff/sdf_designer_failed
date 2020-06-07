@@ -1,7 +1,7 @@
 use wasm_bindgen::prelude::wasm_bindgen;
 /// This is the first layer of state in the application
 use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{HtmlCanvasElement, WebGlRenderingContext};
+use web_sys::{HtmlCanvasElement, WebGl2RenderingContext};
 
 use crate::full_screen_quad;
 use crate::shader;
@@ -15,7 +15,7 @@ extern "C" {
 
 pub struct App {
     canvas: HtmlCanvasElement,
-    gl_context: WebGlRenderingContext,
+    gl_context: WebGl2RenderingContext,
     sdf_shader: shader::SdfShader,
     quad: full_screen_quad::FullScreenQuad,
 
@@ -42,17 +42,17 @@ impl From<shader::ShaderError> for AppError {
     }
 }
 
-fn get_gl_context(canvas: &HtmlCanvasElement) -> Result<WebGlRenderingContext, JsValue> {
-    Ok(canvas.get_context("webgl")?.unwrap().dyn_into()?)
+fn get_gl_context(canvas: &HtmlCanvasElement) -> Result<WebGl2RenderingContext, JsValue> {
+    Ok(canvas.get_context("webgl2")?.unwrap().dyn_into()?)
 }
 
 impl App {
     pub fn new(canvas: HtmlCanvasElement) -> Result<Self, AppError> {
-        let gl: WebGlRenderingContext = get_gl_context(&canvas)?;
+        let gl: WebGl2RenderingContext = get_gl_context(&canvas)?;
         gl.clear_color(0.0, 0.0, 0.0, 1.0);
-        gl.enable(WebGlRenderingContext::DEPTH_TEST);
+        gl.enable(WebGl2RenderingContext::DEPTH_TEST);
 
-        gl.clear(WebGlRenderingContext::COLOR_BUFFER_BIT | WebGlRenderingContext::DEPTH_BUFFER_BIT);
+        gl.clear(WebGl2RenderingContext::COLOR_BUFFER_BIT | WebGl2RenderingContext::DEPTH_BUFFER_BIT);
 
         if gl.is_null() {
             return Err(AppError::NoWebGl);
@@ -89,7 +89,7 @@ impl App {
         self.check_resize();
 
         self.gl_context.clear(
-            WebGlRenderingContext::COLOR_BUFFER_BIT | WebGlRenderingContext::DEPTH_BUFFER_BIT,
+            WebGl2RenderingContext::COLOR_BUFFER_BIT | WebGl2RenderingContext::DEPTH_BUFFER_BIT,
         );
 
         // Tell WebGL to use our program when drawing

@@ -1,5 +1,5 @@
 use wasm_bindgen::JsCast;
-use web_sys::{WebGlBuffer, WebGlRenderingContext};
+use web_sys::{WebGlBuffer, WebGl2RenderingContext};
 
 use crate::shader::Shader;
 
@@ -8,7 +8,7 @@ pub struct FullScreenQuad {
 }
 
 impl FullScreenQuad {
-    pub fn new(gl: &WebGlRenderingContext) -> Result<Self, wasm_bindgen::JsValue> {
+    pub fn new(gl: &WebGl2RenderingContext) -> Result<Self, wasm_bindgen::JsValue> {
         let positions: Vec<f32> = vec![-1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0];
 
         let position_buffer = upload_array_f32(gl, positions)?;
@@ -16,16 +16,16 @@ impl FullScreenQuad {
         Ok(Self { position_buffer })
     }
 
-    pub fn render(&mut self, gl: &WebGlRenderingContext, shade: &impl Shader) {
+    pub fn render(&mut self, gl: &WebGl2RenderingContext, shade: &impl Shader) {
         gl.bind_buffer(
-            WebGlRenderingContext::ARRAY_BUFFER,
+            WebGl2RenderingContext::ARRAY_BUFFER,
             Some(&self.position_buffer),
         );
 
         gl.vertex_attrib_pointer_with_i32(
             shade.get_attrib_position(),
             2, // num components
-            WebGlRenderingContext::FLOAT,
+            WebGl2RenderingContext::FLOAT,
             false, // normalize
             0,     // stride
             0,     // offset
@@ -33,7 +33,7 @@ impl FullScreenQuad {
         gl.enable_vertex_attrib_array(shade.get_attrib_position());
 
         gl.draw_arrays(
-            WebGlRenderingContext::TRIANGLE_STRIP,
+            WebGl2RenderingContext::TRIANGLE_STRIP,
             0, //offset,
             4, // vertex count
         );
@@ -41,14 +41,14 @@ impl FullScreenQuad {
 }
 
 fn upload_array_f32(
-    gl: &WebGlRenderingContext,
+    gl: &WebGl2RenderingContext,
     vertices: Vec<f32>,
 ) -> Result<WebGlBuffer, wasm_bindgen::JsValue> {
     let position_buffer = gl
         .create_buffer()
         .expect("Failed to create position buffer");
 
-    gl.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&position_buffer));
+    gl.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(&position_buffer));
 
     let memory_buffer = wasm_bindgen::memory()
         .dyn_into::<js_sys::WebAssembly::Memory>()?
@@ -60,9 +60,9 @@ fn upload_array_f32(
         .subarray(vertices_location, vertices_location + vertices.len() as u32);
 
     gl.buffer_data_with_array_buffer_view(
-        WebGlRenderingContext::ARRAY_BUFFER,
+        WebGl2RenderingContext::ARRAY_BUFFER,
         &vert_array,
-        WebGlRenderingContext::STATIC_DRAW,
+        WebGl2RenderingContext::STATIC_DRAW,
     );
 
     Ok(position_buffer)
