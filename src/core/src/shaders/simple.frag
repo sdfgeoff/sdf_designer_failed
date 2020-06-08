@@ -14,11 +14,15 @@ out vec4 FragColor;
 
 uniform vec2 resolution;
 
+const int MAX_STEPS = 30;
+const float SURFACE_DISTANCE = 0.001;
+const float VIEW_DISTANCE = 20.0;
+
 const float INSTRUCTION_STOP = 0.0;
 const float INSTRUCTION_NEW_ENTITY = 1.0;
 const float INSTRUCTION_TRANSLATE = 2.0;
 const float INSTRUCTION_SPHERE = 3.0;
-//const float INSTRUCTION_ = 4.0;
+const float INSTRUCTION_BOX = 4.0;
 const float INSTRUCTION_UNION = 5.0;
 const float INSTRUCTION_DIFFERENCE = 6.0;
 const float INSTRUCTION_INTERSECT = 7.0;
@@ -27,52 +31,27 @@ const float INSTRUCTION_INTERSECT = 7.0;
 
 
 uniform float[100] scene_description;
-/*
-float[] scene_description = float[] (
-	1.0, // New Entity
-	2.0, // translate
-	0.0, // x
-	0.0, // y
-	-5.0, // z
-	3.0, // sphere object
-	1.0, // radius
-	5.0, // union
-    
-    1.0, // New Entity
-	2.0, // translate
-	-1.0, // x
-	0.0, // y
-	-5.0, // z
-	3.0, // sphere object
-	1.0, // radius
-	5.0, // union
-
-    1.0, // New Entity
-    2.0, // translate
-	0.0, // x
-	-1.0, // y
-	-4.0, // z
-	3.0, // sphere object
-	1.0, // radius
-	6.0, // difference
-    
-	0.0 // End
-);
-* */
 
 
 struct surface_t {
     int surface_id;
     float sdf;
-    vec3 normal;
 };
 
 
 surface_t sphere_sdf(vec3 query_point, int id, float sphere_radius) {
     return surface_t(
         id,
-        length(query_point)  - sphere_radius,
-        normalize(query_point)
+        length(query_point)  - sphere_radius
+    );
+}
+
+surface_t box_sdf(vec3 query_point, int id, vec3 dimensions) {
+	vec3 q = abs(query_point) - dimensions;  
+  
+    return surface_t(
+        id,
+        length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0)
     );
 }
 
@@ -97,7 +76,6 @@ surface_t surface_difference(surface_t surface_1, surface_t surface_2) {
     // subtract surface_2 from surface_1
     // invert surface 2:
     surface_2.sdf = -surface_2.sdf;
-    surface_2.normal = -surface_2.normal;
     return surface_intersect(surface_1, surface_2);
 }
 
@@ -124,8 +102,8 @@ surface_t world(vec3 world_position) {
 	
 	int pointer = 0;
 	int entity_id = 0;
-	surface_t scene_sdf = surface_t(0, 9999.9, vec3(0.0));
-	surface_t obj_sdf = surface_t(0, 9999.9, vec3(0.0));
+	surface_t scene_sdf = surface_t(0, 9999.9);
+	surface_t obj_sdf = surface_t(0, 9999.9);
 	vec3 view_point = world_position;
 	
 	
@@ -153,6 +131,14 @@ surface_t world(vec3 world_position) {
 			float radius = scene_description[pointer+1];
 			obj_sdf = sphere_sdf(view_point, entity_id, radius);
 			pointer += 2;
+		} else if (data == INSTRUCTION_BOX) {
+			vec3 dimensions = vec3(
+				scene_description[pointer+1],
+				scene_description[pointer+2],
+				scene_description[pointer+3]
+			);
+			obj_sdf = box_sdf(view_point, entity_id, dimensions);
+			pointer += 4;
 		} else if (data == INSTRUCTION_UNION) {
 			scene_sdf = surface_union(scene_sdf, obj_sdf);
 			pointer += 1;
@@ -164,67 +150,73 @@ surface_t world(vec3 world_position) {
 			pointer += 1;
 		}
 	}
-	
-	
-	
-    //surface_t sphere1 = sphere_sdf(transform(world_position, translation(-vec3(0.0, 0.0, 5.0))), 1, 1.0);
-    //surface_t sphere2 = sphere_sdf(transform(world_position, translation(-vec3(0.0, 1.0, 4.0))), 2, 1.0);
-    //surface_t sphere3 = sphere_sdf(transform(world_position, translation(-vec3(1.0, 0.0, 5.0))), 3, 1.0);
-    
-    //surface_t body = sphere1;
-    //body = surface_union(body, sphere3);
-    //body = surface_difference(body, sphere2);
-    
-    //for (int i; i<100; i++) {
-    // 	surface_t new_sphere = sphere_sdf(transform(world_position, translation(-vec3(sin(float(i) + iTime), float(i) / 100.0, 5.0))), i+4, 1.0);
-    //	body = surface_union(body, new_sphere);
-    //}
     
     return scene_sdf;
     
     
 }
 
+
+vec3 gen_color(float t){
+	return vec3(
+		0.5 + 0.5 * cos(2.0 * 3.1415 * (1.0 * t + 0.0)),
+		0.5 + 0.5 * cos(2.0 * 3.1415 * (1.0 * t + 0.33)),
+		0.5 + 0.5 * cos(2.0 * 3.1415 * (1.0 * t + 0.66))
+	);
+}
+
+
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
-{
-    const int steps = 10; // Steps to converge to surface
-    float tolerance = 0.01; // It's a surface if the end result is within this distance of a surface.
-    
-    mat4 projection_matrix = mat4(
-        1.0, 0.0, 0.0, 0.0,
-        0.0, 1.0, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0, 0.0
-    );
-    
+{   
     // camera coords (from -1 to 1)
     vec2 cam_coords = screen_pos.xy;//(fragCoord/iResolution.xy - vec2(0.5)) * 2.0;
     cam_coords.x *= resolution.x / resolution.y;
     
-    vec3 ray_start_position = (projection_matrix * vec4(cam_coords.x, cam_coords.y, 0.0, 0.0)).xyz;
-    vec3 ray_end_position = (projection_matrix * vec4(cam_coords.x, cam_coords.y, 1.0, 0.0)).xyz;
-    vec3 ray_direction = ray_end_position - ray_start_position;
-    
-    vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
+    vec3 ray_start_position = vec3(cam_coords, 0.0);
+    vec3 ray_direction = vec3(0.0, 0.0, 1.0);
         
     vec3 sample_point = ray_start_position;
     surface_t results = world(sample_point);
     float dist = 0.0;
     
-    for (int i=0; i<steps; i += 1) {
+    for (int i=0; i<MAX_STEPS; i += 1) {
         dist += results.sdf;
         sample_point += ray_direction * results.sdf;
         results = world(sample_point);
+        
+        if (results.sdf < SURFACE_DISTANCE || dist > VIEW_DISTANCE) {
+			break;
+		}
     }
     
-    if (results.sdf < tolerance) {
+    
+    vec3 normal = vec3(
+		dFdx(dist),
+		dFdy(dist),
+		0.0
+    );
+    
+    normal *= resolution.y / 10.0;
+    //normal = pow(normal, vec3(0.5));
+    normal.z = sqrt(1.0-dot(normal.xy, normal.xy));
+    
+    
+    vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
+    
+    if (results.sdf < SURFACE_DISTANCE) {
         // We hit a surface
-        color = vec4(
-            results.normal.x,
-            results.normal.y,
-            float(results.surface_id),
-            dist
-        );
+        
+        float lighting = dot(normal, vec3(0.2, 0.3, 0.7));
+        lighting = pow(lighting, 2.0);
+        
+        //~ color = vec4(
+            //~ normal.x,
+            //~ normal.y,
+            //~ float(results.surface_id),
+            //~ dist
+        //~ );
+        color = vec4(gen_color(float(results.surface_id) / 4.0), 1.0);
+        color *= vec4(vec3(lighting), 1.0);
     }
 
     // Output to screen

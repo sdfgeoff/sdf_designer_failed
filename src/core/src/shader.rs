@@ -39,6 +39,7 @@ const INSTRUCTION_STOP: f32 = 0.0;
 const INSTRUCTION_NEW_ENTITY: f32 = 1.0;
 const INSTRUCTION_TRANSLATE: f32 = 2.0;
 const INSTRUCTION_SPHERE: f32 = 3.0;
+const INSTRUCTION_BOX: f32 = 4.0;
 const INSTRUCTION_UNION: f32 = 5.0;
 const INSTRUCTION_DIFFERENCE: f32 = 6.0;
 const INSTRUCTION_INTERSECT: f32 = 7.0;
@@ -79,7 +80,9 @@ impl SdfShader {
 				0.0, // x
 				0.0, // y
 				-5.0, // z
-				INSTRUCTION_SPHERE, // sphere object
+				INSTRUCTION_BOX, // sphere object
+				1.0, // radius
+				0.5, // radius
 				1.0, // radius
 				INSTRUCTION_UNION, // union
 				
