@@ -14,7 +14,20 @@ out vec4 FragColor;
 
 uniform vec2 resolution;
 
+const float INSTRUCTION_STOP = 0.0;
+const float INSTRUCTION_NEW_ENTITY = 1.0;
+const float INSTRUCTION_TRANSLATE = 2.0;
+const float INSTRUCTION_SPHERE = 3.0;
+//const float INSTRUCTION_ = 4.0;
+const float INSTRUCTION_UNION = 5.0;
+const float INSTRUCTION_DIFFERENCE = 6.0;
+const float INSTRUCTION_INTERSECT = 7.0;
+//const float INSTRUCTION_STOP = 8.0;
+//const float INSTRUCTION_STOP = 9.0;
 
+
+uniform float[100] scene_description;
+/*
 float[] scene_description = float[] (
 	1.0, // New Entity
 	2.0, // translate
@@ -43,8 +56,9 @@ float[] scene_description = float[] (
 	1.0, // radius
 	6.0, // difference
     
-	-1.0 // End
+	0.0 // End
 );
+* */
 
 
 struct surface_t {
@@ -117,15 +131,15 @@ surface_t world(vec3 world_position) {
 	
 	for(int i = 0; i < 9999; i++) {
 		float data = scene_description[pointer];
-		if (data == -1.0) {
+		if (data == INSTRUCTION_STOP) {
 			// Scene ends
 			break;
-		} else if (data == 1.0) {
+		} else if (data == INSTRUCTION_NEW_ENTITY) {
 			// New entity to work with
 			view_point = world_position;
 			entity_id += 1;
 			pointer += 1;
-		} else if (data == 2.0) {
+		} else if (data == INSTRUCTION_TRANSLATE) {
 			// Perform translation
 			vec3 offset = vec3(
 				scene_description[pointer+1],
@@ -135,15 +149,18 @@ surface_t world(vec3 world_position) {
 			view_point = transform(view_point, translation(offset));
 			
 			pointer += 4;
-		} else if (data == 3.0) {
+		} else if (data == INSTRUCTION_SPHERE) {
 			float radius = scene_description[pointer+1];
 			obj_sdf = sphere_sdf(view_point, entity_id, radius);
 			pointer += 2;
-		} else if (data == 5.0) {
+		} else if (data == INSTRUCTION_UNION) {
 			scene_sdf = surface_union(scene_sdf, obj_sdf);
 			pointer += 1;
-		} else if (data == 6.0) {
+		} else if (data == INSTRUCTION_DIFFERENCE) {
 			scene_sdf = surface_difference(scene_sdf, obj_sdf);
+			pointer += 1;
+		} else if (data == INSTRUCTION_INTERSECT) {
+			scene_sdf = surface_intersect(scene_sdf, obj_sdf);
 			pointer += 1;
 		}
 	}

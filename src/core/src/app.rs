@@ -96,6 +96,7 @@ impl App {
         self.gl_context.use_program(Some(&self.sdf_shader.program));
         self.sdf_shader
             .set_resolution(&self.gl_context, self.width, self.height);
+        self.sdf_shader.set_scene(&self.gl_context);
 
         self.quad.render(&self.gl_context, &self.sdf_shader)
     }
