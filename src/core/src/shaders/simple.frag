@@ -18,19 +18,29 @@ const int MAX_STEPS = 30;
 const float SURFACE_DISTANCE = 0.001;
 const float VIEW_DISTANCE = 20.0;
 
-const float INSTRUCTION_STOP = 0.0;
-const float INSTRUCTION_NEW_ENTITY = 1.0;
-const float INSTRUCTION_TRANSLATE = 2.0;
-const float INSTRUCTION_SPHERE = 3.0;
-const float INSTRUCTION_BOX = 4.0;
-const float INSTRUCTION_UNION = 5.0;
-const float INSTRUCTION_DIFFERENCE = 6.0;
-const float INSTRUCTION_INTERSECT = 7.0;
-//const float INSTRUCTION_STOP = 8.0;
-//const float INSTRUCTION_STOP = 9.0;
+
+// Core instructions
+const float INSTRUCTION_STOP = (0.0);
+const float INSTRUCTION_NEW_ENTITY = (1.0);
 
 
-uniform float[100] scene_description;
+// Shapes
+const float INSTRUCTION_SPHERE = (100.0);
+const float INSTRUCTION_BOX = (101.0);
+
+// Transformations
+const float INSTRUCTION_TRANSLATE = (200.0);
+const float INSTRUCTION_ROTATE = (201.0);
+const float INSTRUCTION_SCALE = (202.0);
+
+
+// Operations
+const float INSTRUCTION_UNION = (300.0);
+const float INSTRUCTION_DIFFERENCE = (301.0);
+const float INSTRUCTION_INTERSECT = (302.0);
+
+
+uniform float[1000] scene_description;
 
 
 struct surface_t {
@@ -96,7 +106,6 @@ mat4 translation(vec3 trans) {
     
 }
 
-
 surface_t world(vec3 world_position) {
 	
 	
@@ -117,6 +126,8 @@ surface_t world(vec3 world_position) {
 			view_point = world_position;
 			entity_id += 1;
 			pointer += 1;
+			
+
 		} else if (data == INSTRUCTION_TRANSLATE) {
 			// Perform translation
 			vec3 offset = vec3(
@@ -125,8 +136,29 @@ surface_t world(vec3 world_position) {
 				scene_description[pointer+3]
 			);
 			view_point = transform(view_point, translation(offset));
-			
 			pointer += 4;
+		
+		} else if (data == INSTRUCTION_ROTATE) {
+			// Perform translation
+			vec3 offset = vec3(
+				scene_description[pointer+1], // Euler X
+				scene_description[pointer+2], // Euler Y
+				scene_description[pointer+3] // Euler Z
+			);
+			vec3 c = cos(offset);
+			vec3 s = sin(offset);
+			
+			mat4 mat = mat4(
+				vec4(c.z*c.x, -c.z*s.x*c.y + s.z*s.y, c.z*s.x*s.y + s.z*c.y, 0.0),
+				vec4(s.x, c.x*c.y, -c.x*s.y, 0.0),
+				vec4(-s.z*c.x, s.z*s.x*c.y + c.z*s.y, -s.z*s.x*s.y + c.z*c.y, 0.0),
+				vec4(0.0, 0.0, 0.0, 1.0)
+			);
+			
+			view_point = transform(view_point, mat);
+			pointer += 4;
+		
+		
 		} else if (data == INSTRUCTION_SPHERE) {
 			float radius = scene_description[pointer+1];
 			obj_sdf = sphere_sdf(view_point, entity_id, radius);
@@ -139,6 +171,8 @@ surface_t world(vec3 world_position) {
 			);
 			obj_sdf = box_sdf(view_point, entity_id, dimensions);
 			pointer += 4;
+
+
 		} else if (data == INSTRUCTION_UNION) {
 			scene_sdf = surface_union(scene_sdf, obj_sdf);
 			pointer += 1;
@@ -190,6 +224,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     }
     
     
+    // There is banding caused by the difference in direction between
+    // calculation of normals of adjacent 2x2 pixel squares.
+    // It would be better to do this in a separate pass or
+    // with some other method
     vec3 normal = vec3(
 		dFdx(dist),
 		dFdy(dist),
@@ -215,8 +253,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             //~ float(results.surface_id),
             //~ dist
         //~ );
+
         color = vec4(gen_color(float(results.surface_id) / 4.0), 1.0);
         color *= vec4(vec3(lighting), 1.0);
+        color = clamp(color, 0.0, 1.0);
     }
 
     // Output to screen

@@ -1,4 +1,5 @@
-use web_sys::{WebGlProgram, WebGl2RenderingContext, WebGlShader, WebGlUniformLocation};
+use web_sys::{WebGlProgram, WebGl2RenderingContext, WebGlShader, WebGlUniformLocation, window};
+
 
 #[derive(Debug)]
 pub enum ShaderError {
@@ -35,14 +36,30 @@ fn get_uniform_location(
 
 
 
-const INSTRUCTION_STOP: f32 = 0.0;
-const INSTRUCTION_NEW_ENTITY: f32 = 1.0;
-const INSTRUCTION_TRANSLATE: f32 = 2.0;
-const INSTRUCTION_SPHERE: f32 = 3.0;
-const INSTRUCTION_BOX: f32 = 4.0;
-const INSTRUCTION_UNION: f32 = 5.0;
-const INSTRUCTION_DIFFERENCE: f32 = 6.0;
-const INSTRUCTION_INTERSECT: f32 = 7.0;
+enum Instruction {
+	Stop = 0,
+	NewEntity = 1,
+	
+	Sphere = 100,
+	Box = 101,
+	
+	Translate = 200,
+	Rotate = 201,
+	Scale = 202,
+	
+	Union = 300,
+	Difference = 301,
+	Intersect = 302,
+	
+	
+}
+
+impl From<Instruction> for f32 {
+	fn from(val: Instruction) -> f32 {
+		(val as i32) as f32
+	}
+}
+
 
 
 
@@ -71,40 +88,46 @@ impl SdfShader {
     }
     
     pub fn set_scene(&self, gl: &WebGl2RenderingContext) {
+		
+		let now = window().unwrap().performance().unwrap().now();
 	
 		gl.uniform1fv_with_f32_array(
 			Some(&self.uniform_scene_description),
 			&[
-				INSTRUCTION_NEW_ENTITY, // New Entity
-				INSTRUCTION_TRANSLATE, // translate
+				Instruction::NewEntity.into(), // New Entity
+				Instruction::Translate.into(), // translate
 				0.0, // x
 				0.0, // y
 				-5.0, // z
-				INSTRUCTION_BOX, // sphere object
-				1.0, // radius
-				0.5, // radius
-				1.0, // radius
-				INSTRUCTION_UNION, // union
+				Instruction::Rotate.into(), // translate
+				0.0, // x
+				1.0, // y
+				(now / 500.0).sin() as f32, // z
+				Instruction::Box.into(), // sphere object
+				1.0, // x
+				0.5, // y
+				1.0, // z
+				Instruction::Union.into(), // union
 				
-				INSTRUCTION_NEW_ENTITY, // New Entity
-				INSTRUCTION_TRANSLATE, // translate
+				Instruction::NewEntity.into(), // New Entity
+				Instruction::Translate.into(), // translate
 				-1.0, // x
 				0.0, // y
 				-5.0, // z
-				INSTRUCTION_SPHERE, // sphere object
+				Instruction::Sphere.into(), // sphere object
 				1.0, // radius
-				INSTRUCTION_UNION, // union
+				Instruction::Union.into(), // union
 
-				INSTRUCTION_NEW_ENTITY, // New Entity
-				INSTRUCTION_TRANSLATE, // translate
+				Instruction::NewEntity.into(), // New Entity
+				Instruction::Translate.into(), // translate
 				0.0, // x
 				-1.0, // y
 				-4.0, // z
-				INSTRUCTION_SPHERE, // sphere object
+				Instruction::Sphere.into(), // sphere object
 				1.0, // radius
-				INSTRUCTION_DIFFERENCE, // difference
+				Instruction::Difference.into(), // difference
 				
-				INSTRUCTION_STOP // End
+				Instruction::Stop.into() // End
 			]
 		)
 		

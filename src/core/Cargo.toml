@@ -40,5 +40,6 @@ features = [
   'WebGlVertexArrayObject',
   'WheelEvent',
   'Window',
+  'Performance',
   'console',
 ]
